@@ -8,8 +8,8 @@
  },
  "scripts": {
   "start": "node index.js ",
-  "build": "npm install ",
-  "start:prod": "cross-env NODE_ENV=production node index.js"
+    "build": "rm -rf dist && mkdir dist && cp index.js package.json dist/ && echo 'Build Successful' > dist/build-log.txt",
+    "start:prod": "cross-env NODE_ENV=production node dist/index.js"
 },
 
  "devDependencies": {
