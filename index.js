@@ -19,7 +19,6 @@ if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
 }
 // const logFileName = 'app.log';
-console.log(`Logging to ${req.path}`);
 
 if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
