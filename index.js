@@ -8,12 +8,22 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 // Ensure logs directory exists to prevent crash
-const logDir = 'logs';
+// const logDir = 'logs';
+// 1. Define the absolute path to the logs folder at the PROJECT ROOT
+const logDir = path.join(process.cwd(), 'logs');
 const logFileName = 'app.log';
+const logFilePath = path.join(logDir, logFileName);
+
+// 2. Ensure the directory exists in the root
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
+// const logFileName = 'app.log';
+console.log(`Logging to ${req.path}`);
 
 if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
-const logStream = fs.createWriteStream(path.join(logDir, logFileName), { flags: 'a' });
+const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
 const formatLog = (level, args) => {
     const timestamp = new Date().toISOString();
     const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
@@ -26,10 +36,14 @@ console.warn = (...args) => logStream.write(formatLog('WARN', args));
 
 // Example API routes
 app.get('/api/hello', (req, res) => {
+
+console.log(`Logging to ${req.path}`);
   res.json({ message: 'Hello from Express on Hostinger!' });
 });
 
 app.get('/api/health', (req, res) => {
+
+console.log(`Logging to ${req.path}`);
   res.json({ status: 'ok', NODE_ENV: process.env.NODE_ENV || 'development' });
 });
 /**
@@ -58,11 +72,12 @@ function tailFile(filePath, lineCount) {
 
 // 2. The Log Viewer Page
 app.get('/lastlog', (req, res) => {
-    const logFilePath = path.join(process.cwd(), logDir, logFileName);
-    const offset = parseInt(req.query.offset) || 500;
+
+console.log(`Logging to ${req.path}`);
+ const offset = parseInt(req.query.offset) || 500;
 
     if (!fs.existsSync(logFilePath)) {
-        return res.send("<h1>No log file found yet.</h1>");
+        return res.status(404).send("<h1>No log file found yet.</h1>");
     }
 
     // Read the file and get last 500 lines
@@ -155,11 +170,14 @@ const maintenanceTemplate = (title, message) => `
 
 // 3. Routing Logic
 if (process.env.NODE_ENV === 'production' && fs.existsSync(clientDist)) {
+  
     // SUCCESS: Build exists, serve the SPA
     console.log(`✅ Serving production build from: ${clientDist}`);
     app.use(PATH_BASE, express.static(clientDist));
 
     app.get('*', (req, res) => {
+
+console.log(`Logging to ${req.path}`);
         if (req.path.includes("favicon.ico") ) {
             const svgIcon = `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -185,9 +203,11 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(clientDist)) {
     console.warn("⚠️ Client distribution folder NOT found or in Dev mode. Showing maintenance page.");
     
     app.get('*', (req, res) => {
+
+console.log(`Under Maintenance ${req.path}`);
         res.status(503).send(maintenanceTemplate(
             "Under Maintenance", 
-            "We are currently updating our systems. Please visit after 2 days."
+            "We are currently updating our systems. Please visit after 2 days."+req.path
         ));
     });
 }
