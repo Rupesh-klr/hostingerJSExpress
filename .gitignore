@@ -1,0 +1,31 @@
+# Dependency folders (Skips node_modules in root and all sub-folders)
+/node_modules/
+**/node_modules/
+**/**/node_modules/
+
+# Production build folders
+client/dist/
+dist/
+build/
+
+# Environment secrets (Critical for Senior Developers)
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+
