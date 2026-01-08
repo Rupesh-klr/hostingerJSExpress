@@ -1,0 +1,18 @@
+{
+ "name": "server",
+ "main": "index.js",
+ "dependencies": {
+ "express": "^4.21.0",
+ "serve-static": "^1.16.0",
+ "path-to-regexp": "^8.2.0"
+ },
+ "scripts": {
+  "start": "node index.js",
+  "build": "npm run build && npm run start",
+  "start:prod": "cross-env NODE_ENV=production node index.js"
+},
+
+ "devDependencies": {
+  "cross-env": "^7.0.3"
+  }
+}
