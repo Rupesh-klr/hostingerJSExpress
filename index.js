@@ -7,6 +7,22 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
+// Ensure logs directory exists to prevent crash
+const logDir = 'logs';
+const logFileName = 'app.log';
+
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+
+const logStream = fs.createWriteStream(path.join(logDir, logFileName), { flags: 'a' });
+const formatLog = (level, args) => {
+    const timestamp = new Date().toISOString();
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+    return `[${timestamp}] [${level}] ${message}\n`;
+};
+
+console.log = (...args) => logStream.write(formatLog('INFO', args));
+console.error = (...args) => logStream.write(formatLog('ERROR', args));
+console.warn = (...args) => logStream.write(formatLog('WARN', args));
 
 // Example API routes
 app.get('/api/hello', (req, res) => {
@@ -16,7 +32,104 @@ app.get('/api/hello', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', NODE_ENV: process.env.NODE_ENV || 'development' });
 });
+/**
+ * Efficiently reads the last N lines of a file without loading the whole file into memory.
+ */
+function tailFile(filePath, lineCount) {
+    const STATS = fs.statSync(filePath);
+    const FILE_SIZE = STATS.size;
+    const BUFFER_SIZE = 1024 * 64; // Read 64KB chunks
+    let fd = fs.openSync(filePath, 'r');
+    let lines = '';
+    let cursor = FILE_SIZE;
 
+    // Read backwards in chunks until we have enough lines
+    while (lines.split('\n').length <= lineCount && cursor > 0) {
+        let length = Math.min(BUFFER_SIZE, cursor);
+        cursor -= length;
+        let buffer = Buffer.alloc(length);
+        fs.readSync(fd, buffer, 0, length, cursor);
+        lines = buffer.toString('utf8') + lines;
+    }
+
+    fs.closeSync(fd);
+    return lines.split('\n').slice(-lineCount).join('\n');
+}
+
+// 2. The Log Viewer Page
+app.get('/lastlog', (req, res) => {
+    const logFilePath = path.join(process.cwd(), logDir, logFileName);
+    const offset = parseInt(req.query.offset) || 500;
+
+    if (!fs.existsSync(logFilePath)) {
+        return res.send("<h1>No log file found yet.</h1>");
+    }
+
+    // Read the file and get last 500 lines
+    // const logs = fs.readFileSync(logFilePath, 'utf8').split('\n');
+    // const last500 = logs.slice(-500).join('\n');
+
+    // Simple HTML Template with Refresh and Previous buttons
+    try {
+        // Only the requested lines are processed in memory
+        const lastLines = tailFile(logFilePath, offset);
+
+        res.send(`
+            <html>
+            <head>
+                <title>Log Viewer</title>
+                <style>
+                    body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+                    pre { background: #000; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
+                    .controls { margin-bottom: 20px; position: sticky; top: 0; background: #1e1e1e; padding: 10px; }
+                    button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 3-px; }
+                    button:hover { background: #0056b3; }
+                </style>
+            </head>
+                <body style="background:#121212; color:#00ff00; font-family:monospace; padding:20px;">
+                <h2>Last ${offset + 500} Log Entries:</h2>
+                    <div style="position:sticky; top:0; background:#222; padding:10px; border-bottom:1px solid #444;">
+                        <button onclick="location.reload()">🔄 Refresh (Last 500)</button>
+                        <button onclick="location.href='?offset=${offset + 500}'">Load More (Older)⬅️ Previous 500 Lines</button>
+                    </div>
+                    <pre style="white-space: pre-wrap;">${lastLines}</pre>
+                     <script>
+                    // Auto-scroll to bottom of logs on load
+                    window.scrollTo(0, document.body.scrollHeight);
+                </script>
+                </body>
+            </html>
+        `);
+    } catch (err) {
+        res.status(500).send("Error reading logs: " + err.message);
+    }
+    // res.send(`
+    //     <html>
+    //         <head>
+    //             <title>Log Viewer</title>
+    //             <style>
+    //                 body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+    //                 pre { background: #000; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
+    //                 .controls { margin-bottom: 20px; position: sticky; top: 0; background: #1e1e1e; padding: 10px; }
+    //                 button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 3-px; }
+    //                 button:hover { background: #0056b3; }
+    //             </style>
+    //         </head>
+    //         <body>
+    //             <div class="controls">
+    //                 <button onclick="window.location.reload()">🔄 Refresh (Last 500)</button>
+    //                 <button onclick="alert('Previous 500 lines logic triggered')">⬅️ Previous 500 Lines</button>
+    //             </div>
+    //             <h2>Last 500 Log Entries:</h2>
+    //             <pre>${last500 || 'Log is empty...'}</pre>
+    //             <script>
+    //                 // Auto-scroll to bottom of logs on load
+    //                 window.scrollTo(0, document.body.scrollHeight);
+    //             </script>
+    //         </body>
+    //     </html>
+    // `);
+});
 // 1. Email Configuration with Fallbacks
 const DEFAULT_EMAIL = 'support@rupesh.com';
 const AUTH_EMAIL = process.env.AUTH_EMAIL || DEFAULT_EMAIL;
