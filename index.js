@@ -270,7 +270,39 @@ app.get('/api/hello', (req, res) => {
     console.log(`Logging to ${req.path}`);
   res.json({ message: 'Hello from Express on Hostinger!' });
 });
+app.get('/shutdownSpring', (req, res) => {
+    const port = req.query.portShutdown;
 
+    if (!port) {
+        return res.status(400).send("❌ Please provide a portShutdown parameter (e.g., ?portShutdown=8081)");
+    }
+
+    console.log(`⚠️ Manual shutdown requested for port: ${port}`);
+
+    // Linux command to find the process on that port and KILL it (-k)
+    // /tcp ensures we only target the network process
+    const killCommand = `fuser -k ${port}/tcp`;
+
+    exec(killCommand, (error, stdout, stderr) => {
+        // Note: fuser returns a non-zero code if it kills something, 
+        // so we check if the command executed rather than just the error object.
+        if (stderr && !stderr.includes("Specified filename")) {
+            console.error(`Error executing shutdown: ${stderr}`);
+            return res.status(500).send(`❌ Failed to shutdown port ${port}`);
+        }
+
+        console.log(`✅ Port ${port} has been cleared.`);
+        
+        // If the port killed was our main Spring app, reset our local tracking variables
+        if (port == SPRING_PORT) {
+            javaApp = null;
+            isJavaStarting = false;
+            await initServer();
+        }
+
+        res.send(`<h1>Success</h1><p>Process on port <b>${port}</b> has been terminated.</p>`);
+    });
+});
 app.get('/api/health', (req, res) => {
     console.log(`Logging to ${req.path} Log file not found at ${logFilePath}`);
   res.json({ status: 'ok', NODE_ENV: process.env.NODE_ENV || 'development' });
