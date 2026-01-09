@@ -16,18 +16,23 @@ const app = express();
 
 const SPRING_PORT = process.env.PORT || 3032;
 const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
-const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
-
-javaApp.stdout.on('data', (data) => {
-    console.log(`[Spring Boot]: ${data}`);
-});
-// javaApp.stdout.on('data', (data) => {
-//     console.log(`[Java Spring]: ${data}`);
+// const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
+// javaApp.on('error', (err) => {
+//     console.error('❌ Failed to start Java process:', err.message);
+//     if (err.code === 'ENOENT') {
+//         console.error('👉 Reason: Java is not installed or not in the PATH on this server.');
+//     }
 // });
+// javaApp.stdout.on('data', (data) => {
+//     console.log(`[Spring Boot]: ${data}`);
+// });
+// // javaApp.stdout.on('data', (data) => {
+// //     console.log(`[Java Spring]: ${data}`);
+// // });
 
-javaApp.stderr.on('data', (data) => {
-    console.error(`[Java Error]: ${data}`);
-});
+// javaApp.stderr.on('data', (data) => {
+//     console.error(`[Java Error]: ${data}`);
+// });
 
 
 // Proxy Logic: Forward /spring-app1 requests to the Spring Boot JAR
