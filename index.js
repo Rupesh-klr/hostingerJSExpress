@@ -270,7 +270,7 @@ app.get('/api/hello', (req, res) => {
     console.log(`Logging to ${req.path}`);
   res.json({ message: 'Hello from Express on Hostinger!' });
 });
-app.get('/api/shutdownport', (req, res) => {
+app.get('/api/shutdownport', async (req, res) => {
     const port = req.query.portShutdown;
 
     if (!port) {
