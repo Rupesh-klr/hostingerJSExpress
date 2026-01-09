@@ -79,42 +79,89 @@ const startJavaProcess = async () => {
         console.log(`🔗 Node will attempt to proxy to the existing process on this port.`);
         return; // Exit function, don't start a second JAR
     }
-
-    if (javaApp || isJavaStarting) return;
-        // if (javaApp || isJavaStarting) return; // Prevent multiple spawns
+return new Promise((resolve) => {
+        console.log(`🚀 Port ${SPRING_PORT} is free. Starting Java...`);
         
-        isJavaStarting = true;
-        console.log(`🚀 Port ${SPRING_PORT} is free. Starting Java Singleton...`);
-        console.log('🚀 Kicking off Singleton Java Process...');
-    
         javaApp = spawn(JAVA_EXE, JAVA_ARGS, { stdio: 'pipe', cwd: process.cwd() });
-    
-        javaApp.on('error', (err) => {
-            console.error('❌ Java Start Error:', err.message);
-            javaApp = null;
-            isJavaStarting = false;
-        });
-    
+
+        // Set a safety timeout: if Java takes > 15 seconds, move on anyway
+        const safetyTimer = setTimeout(() => {
+            console.log("⏱️ 10s passed: Moving to next extension...");
+            resolve();
+        }, 10000);
+
         javaApp.stdout.on('data', (data) => {
             const output = data.toString();
             console.log(`[Spring Boot]: ${output}`);
-            // Once we see "Started" in the logs, we know it's ready
-            if (output.includes("Started")) {
-                isJavaStarting = false;
+
+            // If we see the success message, resolve early!
+            if (output.includes("Started IndiaApplication") || output.includes("JVM running for")) {
+                console.log("✅ Java is Ready! Proceeding...");
+                clearTimeout(safetyTimer);
+                resolve();
             }
         });
-    
-        javaApp.on('close', (code) => {
-            console.log(`[System] Java process stopped (Code: ${code})`);
-            javaApp = null;
-            isJavaStarting = false;
+
+        javaApp.on('error', (err) => {
+            console.error('❌ Java failed to start:', err.message);
+            clearTimeout(safetyTimer);
+            resolve(); // Resolve anyway so Node doesn't hang forever
         });
-        } catch (globalErr) {
-        // This catches immediate failures like invalid arguments or sync issues
-        console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
-    }
+    });
+    // if (javaApp || isJavaStarting) return;
+    //     // if (javaApp || isJavaStarting) return; // Prevent multiple spawns
+        
+    //     isJavaStarting = true;
+    //     console.log(`🚀 Port ${SPRING_PORT} is free. Starting Java Singleton...`);
+    //     console.log('🚀 Kicking off Singleton Java Process...');
+    
+    //     javaApp = spawn(JAVA_EXE, JAVA_ARGS, { stdio: 'pipe', cwd: process.cwd() });
+    
+    //     javaApp.on('error', (err) => {
+    //         console.error('❌ Java Start Error:', err.message);
+    //         javaApp = null;
+    //         isJavaStarting = false;
+    //     });
+    
+    //     javaApp.stdout.on('data', (data) => {
+    //         const output = data.toString();
+    //         console.log(`[Spring Boot]: ${output}`);
+    //         // Once we see "Started" in the logs, we know it's ready
+    //         if (output.includes("Started")) {
+    //             isJavaStarting = false;
+    //         }
+    //     });
+    
+    //     javaApp.on('close', (code) => {
+    //         console.log(`[System] Java process stopped (Code: ${code})`);
+    //         javaApp = null;
+    //         isJavaStarting = false;
+    //     });
+    //     } catch (globalErr) {
+    //     // This catches immediate failures like invalid arguments or sync issues
+    //     console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
+    // }
 };
-await startJavaProcess();
+
+async function initServer() {
+    try {
+        // 1. Start the first Java JAR
+        console.log("Step 1: Starting Spring-App-1...");
+        await startJavaProcess(); 
+
+        // 2. Optional: Hard 10-second delay if you want to be extra safe
+        // await new Promise(res => setTimeout(res, 10000));
+
+        // 3. Start your Next Extension / Second Spawn
+        console.log("Step 2: Starting Next Extension...");
+        // spawnNextExtension(); 
+
+    } catch (err) {
+        console.error("Initialization failed:", err);
+    }
+}
+
+initServer();
 // try {
 //     console.log('🚀 Initializing Java Process...');
     
