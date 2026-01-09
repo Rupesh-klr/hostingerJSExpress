@@ -23,15 +23,26 @@ const JAR_PATH = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
 
 // Optimized arguments for Shared Hosting
 const JAVA_ARGS = [
-    '-Xmx256m',               // Limit Max Heap to 256MB
+    '-Xmx256m',               // Limit Heap memory to 256MB
     '-Xms128m',               // Start with 128MB
-    '-Xss512k',               // Reduce thread stack size from 1MB to 512KB (saves RAM)
-    '-XX:+UseSerialGC',       // Use Serial GC (stops "Failed to start GC Thread" errors)
-    '-XX:ParallelGCThreads=1', // Force only 1 thread for GC
-    '-XX:CICompilerCount=2',   // Reduce threads used for compiling code
+    '-Xss512k',               // HALVE the memory used by each thread stack (Saves native memory)
+    '-XX:+UseSerialGC',       // IMPORTANT: Use 1 thread for GC instead of 8+
+    '-XX:CICompilerCount=2',   // Limit JIT compiler threads
     '-jar', JAR_PATH,
-    '--server.port=' + SPRING_PORT
+    '--server.port=3032',
+    '--server.tomcat.threads.max=10',  // Limit Tomcat worker threads
+    '--server.tomcat.threads.min-spare=2'
 ];
+// const JAVA_ARGS = [
+//     '-Xmx256m',               // Limit Max Heap to 256MB
+//     '-Xms128m',               // Start with 128MB
+//     '-Xss512k',               // Reduce thread stack size from 1MB to 512KB (saves RAM)
+//     '-XX:+UseSerialGC',       // Use Serial GC (stops "Failed to start GC Thread" errors)
+//     '-XX:ParallelGCThreads=1', // Force only 1 thread for GC
+//     '-XX:CICompilerCount=2',   // Reduce threads used for compiling code
+//     '-jar', JAR_PATH,
+//     '--server.port=' + SPRING_PORT
+// ];
 
 const javaApp = spawn('java', JAVA_ARGS);
 
