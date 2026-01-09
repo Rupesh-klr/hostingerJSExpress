@@ -15,7 +15,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 
 const SPRING_PORT = process.env.PORT || 3032;
-const jarPath = path.join(__dirname, 'java-apps/india-0.0.1-SNAPSHOT.jar');
+const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
 const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
 
 javaApp.stdout.on('data', (data) => {
@@ -60,27 +60,25 @@ if (!fs.existsSync(logDir)) {
 
 if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
-const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
 const formatLog = (level, args) => {
     const timestamp = new Date().toISOString();
     const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
     return `[${timestamp}] [${level}] ${message}\n`;
 };
 
+const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
 console.log = (...args) => logStream.write(formatLog('INFO', args));
 console.error = (...args) => logStream.write(formatLog('ERROR', args));
 console.warn = (...args) => logStream.write(formatLog('WARN', args));
 
 // Example API routes
-app.get('/api/hello', (req, res) => {
-
-console.log(`Logging to ${req.path}`);
+app.get('/api/hello', (req, res) => { 
+    console.log(`Logging to ${req.path}`);
   res.json({ message: 'Hello from Express on Hostinger!' });
 });
 
 app.get('/api/health', (req, res) => {
-
-console.log(`Logging to ${req.path}`);
+    console.log(`Logging to ${req.path} Log file not found at ${logFilePath}`);
   res.json({ status: 'ok', NODE_ENV: process.env.NODE_ENV || 'development' });
 });
 /**
@@ -106,16 +104,19 @@ function tailFile(filePath, lineCount) {
     fs.closeSync(fd);
     return lines.split('\n').slice(-lineCount).join('\n');
 }
-
-
 // 2. The Log Viewer Page
 app.get('/lastlog', (req, res) => {
 
-console.log(`Logging to ${req.path}`);
- const offset = parseInt(req.query.offset) || 500;
+    console.log(`Logging to ${req.path}`);
+    const offset = parseInt(req.query.offset) || 500;
 
     if (!fs.existsSync(logFilePath)) {
-        return res.status(404).send("<h1>No log file found yet.</h1>");
+        fs.mkdirSync(logDir);
+        const logStream_NEW = fs.createWriteStream(logFilePath, { flags: 'a' });
+        console.log = (...args) => logStream_NEW.write(formatLog('INFO', args));
+        console.error = (...args) => logStream_NEW.write(formatLog('ERROR', args));
+        console.warn = (...args) => logStream_NEW.write(formatLog('WARN', args));
+        return res.status(404).send(`Log file not found at ${logFilePath};<h1>No log file found yet. under main directory.</h1>`);
     }
 
     // Read the file and get last 500 lines
@@ -244,7 +245,7 @@ console.log(`Logging to ${req.path}`);
 
 console.log(`Under Maintenance ${req.path}`);
         res.status(503).send(maintenanceTemplate(
-            "Under Maintenance", 
+            "Under Maintenance" + req.path + `Env:- ${process.env.NODE_ENV} ; ${process.env.NODE_ENV === 'production'}; clientFileEsists:- ${fs.existsSync(clientDist)} FilePath:- ${clientDist}`, 
             "We are currently updating our systems. Please visit after 2 days."+req.path
         ));
     });
