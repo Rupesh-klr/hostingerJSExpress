@@ -1,11 +1,11 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn , exec } = require('child_process');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const net = require('net');
 
-// ... your existing express setup ...
+// ... your existing express setup ... const { exec } = require('child_process');
 // const javaApp = spawn('java', [
 //     '-jar', 
 //     path.join(__dirname, 'java-apps', 'india-0.0.1-SNAPSHOT.jar'),
