@@ -57,7 +57,7 @@ const JAVA_ARGS = [
 //     '-jar', JAR_PATH,
 //     '--server.port=' + SPRING_PORT
 // ];
-let javaApp = null;
+// let javaApp = null;
 let javaApp = null;
 let isJavaStarting = false;
 
