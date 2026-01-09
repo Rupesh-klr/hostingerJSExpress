@@ -21,8 +21,22 @@ const SPRING_PORT = process.env.PORT || 3032;
 const JAVA_EXE = '/home/u115817599/domains/common-zip/jdk-23.0.2/bin/java';
 const JAR_PATH = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
 
+// Optimized arguments for Shared Hosting
+const javaArgs = [
+    '-Xmx256m',               // Limit Max Heap to 256MB
+    '-Xms128m',               // Start with 128MB
+    '-Xss512k',               // Reduce thread stack size from 1MB to 512KB (saves RAM)
+    '-XX:+UseSerialGC',       // Use Serial GC (stops "Failed to start GC Thread" errors)
+    '-XX:ParallelGCThreads=1', // Force only 1 thread for GC
+    '-XX:CICompilerCount=2',   // Reduce threads used for compiling code
+    '-jar', jarPath,
+    '--server.port=' + SPRING_PORT
+];
+
+const javaApp = spawn('java', javaArgs);
+
 // Use the absolute path instead of the 'java' string
-const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
+// const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
 
 // IMPORTANT: Always add an 'error' listener to prevent the Node process from crashing
 javaApp.on('error', (err) => {
