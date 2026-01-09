@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const net = require('net');
 
 // ... your existing express setup ...
 // const javaApp = spawn('java', [
@@ -10,7 +11,20 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 //     path.join(__dirname, 'java-apps', 'india-0.0.1-SNAPSHOT.jar'),
 //     '--server.port=8081'
 // ]);
-
+const isPortBusy = (port) => {
+    return new Promise((resolve) => {
+        const server = net.createServer()
+            .once('error', (err) => {
+                if (err.code === 'EADDRINUSE') resolve(true); // Port is taken
+                else resolve(false);
+            })
+            .once('listening', () => {
+                server.close();
+                resolve(false); // Port is free
+            })
+            .listen(port);
+    });
+};
 
 const app = express();
 
@@ -44,45 +58,101 @@ const JAVA_ARGS = [
 //     '--server.port=' + SPRING_PORT
 // ];
 let javaApp = null;
+let javaApp = null;
+let isJavaStarting = false;
 
-try {
-    console.log('🚀 Initializing Java Process...');
+// Helper function to check if the Java port is alive
+const checkJavaHealth = async () => {
+    try {
+        const response = await fetch(`http://localhost:${SPRING_PORT}/actuator/health`);
+        return response.ok;
+    } catch (err) {
+        return false;
+    }
+};
+const startJavaProcess = () => {
+    try{
+        const busy = await isPortBusy(SPRING_PORT);
     
-    // 1. Spawn the process (Remove 'inherit' to keep stdout/stderr accessible)
-    javaApp = spawn(JAVA_EXE, JAVA_ARGS, { 
-        stdio: 'pipe', // This ensures javaApp.stdout is NOT null
-        cwd: process.cwd() 
-    });
-
-    // 2. Safely attach the error listener
-    if (javaApp) {
-        javaApp.on('error', (err) => {
-            console.error('❌ Process Level Error:', err.message);
-        });
-
-        // 3. Independent check for stdout (Output)
-        if (javaApp.stdout) {
-            javaApp.stdout.on('data', (data) => {
-                console.log(`[Spring Boot]: ${data}`);
-            });
-        }
-
-        // 4. Independent check for stderr (Errors)
-        if (javaApp.stderr) {
-            javaApp.stderr.on('data', (data) => {
-                console.error(`[Java Error]: ${data}`);
-            });
-        }
-        
-        javaApp.on('close', (code) => {
-            console.log(`[System] Java process exited with code ${code}`);
-        });
+    if (busy) {
+        console.log(`⚠️ Port ${SPRING_PORT} is already busy. Skipping Java spawn...`);
+        console.log(`🔗 Node will attempt to proxy to the existing process on this port.`);
+        return; // Exit function, don't start a second JAR
     }
 
-} catch (globalErr) {
-    // This catches immediate failures like invalid arguments or sync issues
-    console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
-}
+    if (javaApp || isJavaStarting) return;
+        // if (javaApp || isJavaStarting) return; // Prevent multiple spawns
+        
+        isJavaStarting = true;
+        console.log(`🚀 Port ${SPRING_PORT} is free. Starting Java Singleton...`);
+        console.log('🚀 Kicking off Singleton Java Process...');
+    
+        javaApp = spawn(JAVA_EXE, JAVA_ARGS, { stdio: 'pipe', cwd: process.cwd() });
+    
+        javaApp.on('error', (err) => {
+            console.error('❌ Java Start Error:', err.message);
+            javaApp = null;
+            isJavaStarting = false;
+        });
+    
+        javaApp.stdout.on('data', (data) => {
+            const output = data.toString();
+            console.log(`[Spring Boot]: ${output}`);
+            // Once we see "Started" in the logs, we know it's ready
+            if (output.includes("Started")) {
+                isJavaStarting = false;
+            }
+        });
+    
+        javaApp.on('close', (code) => {
+            console.log(`[System] Java process stopped (Code: ${code})`);
+            javaApp = null;
+            isJavaStarting = false;
+        });
+        } catch (globalErr) {
+        // This catches immediate failures like invalid arguments or sync issues
+        console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
+    }
+};
+startJavaProcess();
+// try {
+//     console.log('🚀 Initializing Java Process...');
+    
+//     // 1. Spawn the process (Remove 'inherit' to keep stdout/stderr accessible)
+//     javaApp = spawn(JAVA_EXE, JAVA_ARGS, { 
+//         stdio: 'pipe', // This ensures javaApp.stdout is NOT null
+//         cwd: process.cwd() 
+//     });
+
+//     // 2. Safely attach the error listener
+//     if (javaApp) {
+//         javaApp.on('error', (err) => {
+//             console.error('❌ Process Level Error:', err.message);
+//         });
+
+//         // 3. Independent check for stdout (Output)
+//         if (javaApp.stdout) {
+//             javaApp.stdout.on('data', (data) => {
+//                 console.log(`[Spring Boot]: ${data}`);
+//             });
+//         }
+
+//         // 4. Independent check for stderr (Errors)
+//         if (javaApp.stderr) {
+//             javaApp.stderr.on('data', (data) => {
+//                 console.error(`[Java Error]: ${data}`);
+//             });
+//         }
+        
+//         javaApp.on('close', (code) => {
+//             console.log(`[System] Java process exited with code ${code}`);
+//         });
+//     }
+
+// } catch (globalErr) {
+//     // This catches immediate failures like invalid arguments or sync issues
+//     console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
+// }
 
 // const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
 // const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
@@ -100,13 +170,21 @@ try {
 
 
 // Proxy Logic: Forward /spring-app1 requests to the Spring Boot JAR
-app.use('/spring-app1', createProxyMiddleware({
+app.use('/spring-app1', async (req, res, next) => {
+    // If Java is dead, try to start it
+    if (!javaApp) {
+        startJavaProcess();
+        return res.status(503).send("Backend is initializing... please refresh in 10 seconds.");
+    }
+    next();
+},createProxyMiddleware({
     target: 'http://localhost:' + SPRING_PORT,
     changeOrigin: true,
     pathRewrite: {
         '^/spring-app1': '', // Removes '/spring-app1' before sending to Java
     },
     onProxyRes: (proxyRes, req, res) => {
+        console.log(`[Proxy] Routing ${req.method} ${req.url}`);
         console.log(`[Proxy] Forwarded: ${req.url} -> Status: ${proxyRes.statusCode}`);
     }
 }));
