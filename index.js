@@ -1,8 +1,46 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+// ... your existing express setup ...
+// const javaApp = spawn('java', [
+//     '-jar', 
+//     path.join(__dirname, 'java-apps', 'india-0.0.1-SNAPSHOT.jar'),
+//     '--server.port=8081'
+// ]);
+
 
 const app = express();
+
+const SPRING_PORT = process.env.PORT || 3032;
+const jarPath = path.join(__dirname, 'java-apps/india-0.0.1-SNAPSHOT.jar');
+const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
+
+javaApp.stdout.on('data', (data) => {
+    console.log(`[Spring Boot]: ${data}`);
+});
+// javaApp.stdout.on('data', (data) => {
+//     console.log(`[Java Spring]: ${data}`);
+// });
+
+javaApp.stderr.on('data', (data) => {
+    console.error(`[Java Error]: ${data}`);
+});
+
+
+// Proxy Logic: Forward /spring-app1 requests to the Spring Boot JAR
+app.use('/spring-app1', createProxyMiddleware({
+    target: 'http://localhost:' + SPRING_PORT,
+    changeOrigin: true,
+    pathRewrite: {
+        '^/spring-app1': '', // Removes '/spring-app1' before sending to Java
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[Proxy] Forwarded: ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+}));
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -68,6 +106,7 @@ function tailFile(filePath, lineCount) {
     fs.closeSync(fd);
     return lines.split('\n').slice(-lineCount).join('\n');
 }
+
 
 // 2. The Log Viewer Page
 app.get('/lastlog', (req, res) => {
