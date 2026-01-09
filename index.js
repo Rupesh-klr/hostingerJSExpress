@@ -114,7 +114,7 @@ const startJavaProcess = async () => {
         console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
     }
 };
-startJavaProcess();
+await startJavaProcess();
 // try {
 //     console.log('🚀 Initializing Java Process...');
     
