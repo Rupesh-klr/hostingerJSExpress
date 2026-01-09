@@ -70,7 +70,7 @@ const checkJavaHealth = async () => {
         return false;
     }
 };
-const startJavaProcess = () => {
+const startJavaProcess = async () => {
     try{
         const busy = await isPortBusy(SPRING_PORT);
     
