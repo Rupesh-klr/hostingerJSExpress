@@ -43,26 +43,46 @@ const JAVA_ARGS = [
 //     '-jar', JAR_PATH,
 //     '--server.port=' + SPRING_PORT
 // ];
+let javaApp = null;
 
-const javaApp = spawn(JAVA_EXE, JAVA_ARGS );
+try {
+    console.log('🚀 Initializing Java Process...');
+    
+    // 1. Spawn the process (Remove 'inherit' to keep stdout/stderr accessible)
+    javaApp = spawn(JAVA_EXE, JAVA_ARGS, { 
+        stdio: 'pipe', // This ensures javaApp.stdout is NOT null
+        cwd: process.cwd() 
+    });
 
-// Use the absolute path instead of the 'java' string
-// const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
+    // 2. Safely attach the error listener
+    if (javaApp) {
+        javaApp.on('error', (err) => {
+            console.error('❌ Process Level Error:', err.message);
+        });
 
-// IMPORTANT: Always add an 'error' listener to prevent the Node process from crashing
-javaApp.on('error', (err) => {
-    console.error('❌ Failed to start Java:', err.message);
-    if (err.code === 'ENOENT') {
-        console.error('👉 Tip: Check if the JAVA_EXE path is correct in Putty.');
+        // 3. Independent check for stdout (Output)
+        if (javaApp.stdout) {
+            javaApp.stdout.on('data', (data) => {
+                console.log(`[Spring Boot]: ${data}`);
+            });
+        }
+
+        // 4. Independent check for stderr (Errors)
+        if (javaApp.stderr) {
+            javaApp.stderr.on('data', (data) => {
+                console.error(`[Java Error]: ${data}`);
+            });
+        }
+        
+        javaApp.on('close', (code) => {
+            console.log(`[System] Java process exited with code ${code}`);
+        });
     }
-});
-javaApp.stdout.on('data', (data) => {
-    console.log(`[Spring Boot]: ${data}`);
-});
 
-javaApp.stderr.on('data', (data) => {
-    console.error(`[Java Error]: ${data}`);
-});
+} catch (globalErr) {
+    // This catches immediate failures like invalid arguments or sync issues
+    console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
+}
 
 // const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
 // const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
