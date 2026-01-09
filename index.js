@@ -29,7 +29,7 @@ const JAVA_ARGS = [
     '-XX:+UseSerialGC',       // IMPORTANT: Use 1 thread for GC instead of 8+
     '-XX:CICompilerCount=2',   // Limit JIT compiler threads
     '-jar', JAR_PATH,
-    '--server.port=3032',
+    '--server.port='+ SPRING_PORT,
     '--server.tomcat.threads.max=10',  // Limit Tomcat worker threads
     '--server.tomcat.threads.min-spare=2'
 ];
@@ -44,16 +44,18 @@ const JAVA_ARGS = [
 //     '--server.port=' + SPRING_PORT
 // ];
 
-const javaApp = spawn('java', JAVA_ARGS);
+const javaApp = spawn(JAVA_EXE, JAVA_ARGS , { stdio: 'inherit' });
 
 // Use the absolute path instead of the 'java' string
 // const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
 
 // IMPORTANT: Always add an 'error' listener to prevent the Node process from crashing
 javaApp.on('error', (err) => {
-    console.error('❌ Failed to start Java process:', err.message);
+    console.error('❌ Failed to start Java:', err.message);
+    if (err.code === 'ENOENT') {
+        console.error('👉 Tip: Check if the JAVA_EXE path is correct in Putty.');
+    }
 });
-
 javaApp.stdout.on('data', (data) => {
     console.log(`[Spring Boot]: ${data}`);
 });
