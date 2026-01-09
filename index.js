@@ -116,7 +116,7 @@ app.get('/lastlog', (req, res) => {
         console.log = (...args) => logStream_NEW.write(formatLog('INFO', args));
         console.error = (...args) => logStream_NEW.write(formatLog('ERROR', args));
         console.warn = (...args) => logStream_NEW.write(formatLog('WARN', args));
-        return res.status(404).send(`Log file not found at ${logFilePath};<h1>No log file found yet. under main directory.</h1>`);
+        return res.status(404).send(`<h1> Log file not found at ${logFilePath}; No log file found yet. under main directory.</h1>`);
     }
 
     // Read the file and get last 500 lines
@@ -203,6 +203,8 @@ const maintenanceTemplate = (title, message) => `
       <p><strong>Support:</strong> ${SUPPORT_EMAIL}</p>
       <p><strong>Auth Support:</strong> ${AUTH_EMAIL}</p>
     </div>
+    <h1>sorry (((::)))</h1>
+    <!-- <p style="font-size: 1.2rem;">${message}</p> -->
     <p style="margin-top: 30px; color: #777;">&copy; 2026 Digital Wallet Service</p>
   </div>
 `;
