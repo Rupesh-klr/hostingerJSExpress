@@ -137,10 +137,10 @@ return new Promise((resolve) => {
     //         javaApp = null;
     //         isJavaStarting = false;
     //     });
-    //     } catch (globalErr) {
-    //     // This catches immediate failures like invalid arguments or sync issues
-    //     console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
-    // }
+        } catch (globalErr) {
+        // This catches immediate failures like invalid arguments or sync issues
+        console.error('🔥 Critical Failure during Java Spawn:', globalErr.message);
+    }
 };
 
 async function initServer() {
