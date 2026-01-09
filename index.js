@@ -20,7 +20,6 @@ const SPRING_PORT = process.env.PORT || 3032;
 // Replace this with the EXACT path you found using 'pwd' in your bin folder
 const JAVA_EXE = '/home/u115817599/domains/common-zip/jdk-23.0.2/bin/java';
 const JAR_PATH = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
-const SPRING_PORT = process.env.PORT || 3032;
 
 // Use the absolute path instead of the 'java' string
 const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
