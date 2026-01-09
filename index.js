@@ -28,7 +28,7 @@ const isPortBusy = (port) => {
 
 const app = express();
 
-const SPRING_PORT = process.env.PORT || 3032;
+const SPRING_PORT = process.env.PORT || 8088;
 
 
 // Replace this with the EXACT path you found using 'pwd' in your bin folder
