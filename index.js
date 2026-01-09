@@ -15,19 +15,42 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 
 const SPRING_PORT = process.env.PORT || 3032;
-const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
-const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
+
+
+// Replace this with the EXACT path you found using 'pwd' in your bin folder
+const JAVA_EXE = '/home/u115817599/domains/common-zip/jdk-23.0.2/bin/java';
+const JAR_PATH = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
+const SPRING_PORT = process.env.PORT || 3032;
+
+// Use the absolute path instead of the 'java' string
+const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
+
+// IMPORTANT: Always add an 'error' listener to prevent the Node process from crashing
+javaApp.on('error', (err) => {
+    console.error('❌ Failed to start Java process:', err.message);
+});
 
 javaApp.stdout.on('data', (data) => {
     console.log(`[Spring Boot]: ${data}`);
 });
-// javaApp.stdout.on('data', (data) => {
-//     console.log(`[Java Spring]: ${data}`);
-// });
 
 javaApp.stderr.on('data', (data) => {
     console.error(`[Java Error]: ${data}`);
 });
+
+// const jarPath = path.join(process.cwd(), 'java-apps/india-0.0.1-SNAPSHOT.jar');
+// const javaApp = spawn('java', ['-jar', jarPath, '--server.port=' + SPRING_PORT]);
+
+// javaApp.stdout.on('data', (data) => {
+//     console.log(`[Spring Boot]: ${data}`);
+// });
+// // javaApp.stdout.on('data', (data) => {
+// //     console.log(`[Java Spring]: ${data}`);
+// // });
+
+// javaApp.stderr.on('data', (data) => {
+//     console.error(`[Java Error]: ${data}`);
+// });
 
 
 // Proxy Logic: Forward /spring-app1 requests to the Spring Boot JAR
