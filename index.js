@@ -44,7 +44,7 @@ const JAVA_ARGS = [
 //     '--server.port=' + SPRING_PORT
 // ];
 
-const javaApp = spawn(JAVA_EXE, JAVA_ARGS , { stdio: 'inherit' });
+const javaApp = spawn(JAVA_EXE, JAVA_ARGS );
 
 // Use the absolute path instead of the 'java' string
 // const javaApp = spawn(JAVA_EXE, ['-jar', JAR_PATH, '--server.port=' + SPRING_PORT]);
