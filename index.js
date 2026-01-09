@@ -283,7 +283,7 @@ app.get('/api/shutdownport', async (req, res) => {
     // /tcp ensures we only target the network process
     const killCommand = `fuser -k ${port}/tcp`;
 
-    exec(killCommand, (error, stdout, stderr) => {
+    exec(killCommand, async (error, stdout, stderr) => {
         // Note: fuser returns a non-zero code if it kills something, 
         // so we check if the command executed rather than just the error object.
         if (stderr && !stderr.includes("Specified filename")) {
